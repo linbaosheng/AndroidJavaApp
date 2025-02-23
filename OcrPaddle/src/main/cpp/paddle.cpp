@@ -30,6 +30,7 @@ std::map<std::string, double> Config_;
    return paddle::lite_api::CreatePaddlePredictor<paddle::lite_api::MobileConfig>(
                     config);
 }*/
+
 cv::Mat GetRotateCropImage(cv::Mat srcimage, std::vector<std::vector<int>> box) {
     cv::Mat image;
     srcimage.copyTo(image);
@@ -43,6 +44,7 @@ cv::Mat GetRotateCropImage(cv::Mat srcimage, std::vector<std::vector<int>> box) 
     int bottom = int(*std::max_element(y_collect, y_collect + 4));
 
     cv::Mat img_crop;
+    // opencv 中裁剪代码
     image(cv::Rect(left, top, right - left, bottom - top)).copyTo(img_crop);
 
     for (int i = 0; i < points.size(); i++) {
@@ -153,7 +155,7 @@ Java_com_aml_ocr_paddle_jni_Native_paddleOcrTest(JNIEnv *env, jclass clazz, jstr
     cv::Mat bgrImage;
     if (origin_img.channels() == 4){
         cv::cvtColor(origin_img, bgrImage, cv::COLOR_RGBA2BGR);
-    }else{
+    } else {
         origin_img.copyTo(bgrImage);
     }
     LOGI("bgrImage channels: %d", bgrImage.channels());
@@ -171,6 +173,7 @@ Java_com_aml_ocr_paddle_jni_Native_paddleOcrTest(JNIEnv *env, jclass clazz, jstr
     // 创建深拷贝：保留原始预处理结果
     cv::Mat srcImg;
     bgrImage_resize.copyTo(srcImg);
+
 //    LOGI("srcimg channels: %d", srcimg.channels());
 //    LOGI("srcimg shape: %d x %d x %d", srcimg.rows, srcimg.cols, srcimg.channels());
 
@@ -191,13 +194,14 @@ Java_com_aml_ocr_paddle_jni_Native_paddleOcrTest(JNIEnv *env, jclass clazz, jstr
 //    LOGD("debug===boxes: %d", text_boxes.size());
     LOGI("paddle ocr start 4");
     int use_direction_classify = int(Config_["use_direction_classify"]);
+    // 正对每个区域进行裁剪，然后旋转
     for (int i = text_boxes.size() - 1; i >= 0; i--) {
         // 使用 GetRotateCropImage 获取该框中的图像区域，并进行旋转裁剪
         crop_img = GetRotateCropImage(img, text_boxes[i]);
-//        if (use_direction_classify >= 1) {
-//            // 方向分类
-//            crop_img = clsPredictor_->Predict(crop_img, nullptr, nullptr, nullptr, 0.9);
-//        }
+        if (use_direction_classify >= 1) {
+            // 方向分类
+            crop_img = clsPredictor_->Predict(crop_img, nullptr, nullptr, nullptr, 0.9);
+        }
         // 识别阶段
         auto res = recPredictor_->Predict(crop_img, nullptr, nullptr, nullptr,
                                           charactor_dict_);
